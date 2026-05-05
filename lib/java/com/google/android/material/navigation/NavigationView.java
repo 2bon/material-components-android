@@ -91,6 +91,7 @@ import com.google.android.material.shape.MaterialShapeUtils;
 import com.google.android.material.shape.ShapeAppearanceModel;
 import com.google.android.material.shape.ShapeableDelegate;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import java.lang.ref.WeakReference;
 
 /**
  * Represents a standard navigation menu for application. The menu contents can be populated by a
@@ -174,6 +175,8 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
           }
         }
       };
+
+  private final FocusDrawerListener focusDrawerListener = new FocusDrawerListener();
 
   public NavigationView(@NonNull Context context) {
     this(context, null);
@@ -465,14 +468,21 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
     MaterialShapeUtils.setParentAbsoluteElevation(this);
 
     ViewParent parent = getParent();
-    if (parent instanceof DrawerLayout && backOrchestrator.shouldListenForBackCallbacks()) {
+    if (parent instanceof DrawerLayout) {
       DrawerLayout drawerLayout = (DrawerLayout) parent;
       // Make sure there's only ever one listener
-      drawerLayout.removeDrawerListener(backDrawerListener);
-      drawerLayout.addDrawerListener(backDrawerListener);
+      focusDrawerListener.clearLastFocusedView();
+      drawerLayout.removeDrawerListener(focusDrawerListener);
+      drawerLayout.addDrawerListener(focusDrawerListener);
 
-      if (drawerLayout.isDrawerOpen(this)) {
-        backOrchestrator.startListeningForBackCallbacksWithPriorityOverlay();
+      if (backOrchestrator.shouldListenForBackCallbacks()) {
+        // Make sure there's only ever one listener
+        drawerLayout.removeDrawerListener(backDrawerListener);
+        drawerLayout.addDrawerListener(backDrawerListener);
+
+        if (drawerLayout.isDrawerOpen(this)) {
+          backOrchestrator.startListeningForBackCallbacksWithPriorityOverlay();
+        }
       }
     }
   }
@@ -487,6 +497,7 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
     if (parent instanceof DrawerLayout) {
       DrawerLayout drawerLayout = (DrawerLayout) parent;
       drawerLayout.removeDrawerListener(backDrawerListener);
+      drawerLayout.removeDrawerListener(focusDrawerListener);
     }
 
     backOrchestrator.stopListeningForBackCallbacks();
@@ -1168,6 +1179,82 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
      * @return true to display the item as the selected item
      */
     public boolean onNavigationItemSelected(@NonNull MenuItem item);
+  }
+
+  private class FocusDrawerListener extends SimpleDrawerListener {
+    private boolean hasSavedFocus = false;
+    @Nullable private WeakReference<View> lastFocusedView = null;
+
+    private void saveLastFocusedView() {
+      if (hasSavedFocus) {
+        return;
+      }
+      hasSavedFocus = true;
+
+      if (NavigationView.this.hasFocus()) {
+        return;
+      }
+
+      Activity activity = ContextUtils.getActivity(getContext());
+      if (activity == null) {
+        return;
+      }
+
+      View currentFocus = activity.getCurrentFocus();
+      if (currentFocus != null) {
+        lastFocusedView = new WeakReference<>(currentFocus);
+      }
+    }
+
+    void clearLastFocusedView() {
+      hasSavedFocus = false;
+      lastFocusedView = null;
+    }
+
+    @Override
+    public void onDrawerSlide(@NonNull View drawerView, float slideOffset) {
+      if (drawerView != NavigationView.this) {
+        return;
+      }
+      saveLastFocusedView();
+    }
+
+    @Override
+    public void onDrawerOpened(@NonNull View drawerView) {
+      if (drawerView != NavigationView.this) {
+        return;
+      }
+
+      saveLastFocusedView();
+      if (shouldAutoRequestFocus(drawerView)) {
+        drawerView.requestFocus();
+      }
+    }
+
+    @Override
+    public void onDrawerClosed(@NonNull View drawerView) {
+      if (drawerView != NavigationView.this) {
+        return;
+      }
+
+      if (lastFocusedView == null) {
+        clearLastFocusedView();
+        return;
+      }
+
+      View viewToFocus = lastFocusedView.get();
+      if (viewToFocus == null || !shouldAutoRequestFocus(viewToFocus)) {
+        clearLastFocusedView();
+        return;
+      }
+
+      viewToFocus.requestFocus();
+      clearLastFocusedView();
+    }
+
+    private boolean shouldAutoRequestFocus(@NonNull View view) {
+      return view.isAttachedToWindow() && !view.isInTouchMode();
+    }
   }
 
   /**
