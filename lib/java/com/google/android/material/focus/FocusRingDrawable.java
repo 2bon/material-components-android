@@ -50,6 +50,7 @@ import android.util.FloatProperty;
 import android.util.StateSet;
 import android.util.TypedValue;
 import android.view.animation.OvershootInterpolator;
+import androidx.annotation.ColorInt;
 import androidx.annotation.DimenRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -743,6 +744,24 @@ public class FocusRingDrawable extends DrawableWrapper {
     state.ringEnabled = enabled;
   }
 
+  @ColorInt
+  public int getFocusRingOuterStrokeColor() {
+    return state.ringOuterColor;
+  }
+
+  public void setFocusRingOuterStrokeColor(@ColorInt int outerStrokeColor) {
+    state.ringOuterColor = outerStrokeColor;
+  }
+
+  @ColorInt
+  public int getFocusRingInnerStrokeColor() {
+    return state.ringInnerColor;
+  }
+
+  public void setFocusRingInnerStrokeColor(@ColorInt int innerStrokeColor) {
+    state.ringInnerColor = innerStrokeColor;
+  }
+
   public float getFocusRingInset() {
     return state.ringInset;
   }
@@ -776,6 +795,15 @@ public class FocusRingDrawable extends DrawableWrapper {
 
   public void setFocusRingShapeAppearance(@Nullable ShapeAppearance shapeAppearance) {
     state.ringShapeAppearance = shapeAppearance;
+  }
+
+  public boolean updateFocusRingShapeAppearanceFromWrappedDrawable() {
+    ShapeAppearance shapeAppearance = toShapeAppearance(getDrawable());
+    if (shapeAppearance != null) {
+      updateShapeAppearanceCornerSizeOrPath(shapeAppearance);
+      return true;
+    }
+    return false;
   }
 
   @Nullable
@@ -863,9 +891,7 @@ public class FocusRingDrawable extends DrawableWrapper {
       updateShapeAppearanceCornerSizeOrPath(state.ringShapeAppearance);
       return;
     }
-    ShapeAppearance shapeAppearance = toShapeAppearance(getDrawable());
-    if (shapeAppearance != null) {
-      updateShapeAppearanceCornerSizeOrPath(shapeAppearance);
+    if (updateFocusRingShapeAppearanceFromWrappedDrawable()) {
       return;
     }
     shapeAppearanceCornerSize = -1;
