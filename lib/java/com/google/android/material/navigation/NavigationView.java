@@ -1182,32 +1182,29 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
   }
 
   private class FocusDrawerListener extends SimpleDrawerListener {
-    private boolean hasSavedFocus = false;
     @Nullable private WeakReference<View> lastFocusedView = null;
 
     private void saveLastFocusedView() {
-      if (hasSavedFocus) {
-        return;
+      if (lastFocusedView == null) {
+        lastFocusedView = new WeakReference<>(getCurrentFocus());
       }
-      hasSavedFocus = true;
+    }
 
+    @Nullable
+    private View getCurrentFocus() {
       if (NavigationView.this.hasFocus()) {
-        return;
+        return null;
       }
 
       Activity activity = ContextUtils.getActivity(getContext());
       if (activity == null) {
-        return;
+        return null;
       }
 
-      View currentFocus = activity.getCurrentFocus();
-      if (currentFocus != null) {
-        lastFocusedView = new WeakReference<>(currentFocus);
-      }
+      return activity.getCurrentFocus();
     }
 
     void clearLastFocusedView() {
-      hasSavedFocus = false;
       lastFocusedView = null;
     }
 
@@ -1216,6 +1213,16 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
       if (drawerView != NavigationView.this) {
         return;
       }
+
+      if (drawerView.getParent() instanceof DrawerLayout) {
+        DrawerLayout drawerLayout = (DrawerLayout) drawerView.getParent();
+        if (drawerLayout.isDrawerOpen(drawerView)) {
+          // If the drawer is fully open when a slide event occurs, it means the drawer is
+          // beginning to slide closed. We only want to save the focus when it slides open.
+          return;
+        }
+      }
+
       saveLastFocusedView();
     }
 
@@ -1225,7 +1232,10 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
         return;
       }
 
+      // onDrawerSlide is not guaranteed to be called, e.g., if the drawer is opened without an
+      // animation. We call saveLastFocusedView() here as a fallback.
       saveLastFocusedView();
+
       if (shouldAutoRequestFocus(drawerView)) {
         drawerView.requestFocus();
       }
@@ -1238,7 +1248,6 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
       }
 
       if (lastFocusedView == null) {
-        clearLastFocusedView();
         return;
       }
 
