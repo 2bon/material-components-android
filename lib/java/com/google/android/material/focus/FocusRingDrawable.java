@@ -762,12 +762,36 @@ public class FocusRingDrawable extends DrawableWrapper {
     state.ringInnerColor = innerStrokeColor;
   }
 
+  public float getFocusRingOuterStrokeWidth() {
+    return state.ringOuterStrokeWidth;
+  }
+
+  public void setFocusRingOuterStrokeWidth(float outerStrokeWidth) {
+    state.ringOuterStrokeWidth = outerStrokeWidth;
+  }
+
+  public float getFocusRingInnerStrokeWidth() {
+    return state.ringInnerStrokeWidth;
+  }
+
+  public void setFocusRingInnerStrokeWidth(float innerStrokeWidth) {
+    state.ringInnerStrokeWidth = innerStrokeWidth;
+  }
+
   public float getFocusRingInset() {
     return state.ringInset;
   }
 
   public void setFocusRingInset(float inset) {
     state.ringInset = inset;
+  }
+
+  public float getFocusRingInnerInset() {
+    return state.ringInnerInset;
+  }
+
+  public void setFocusRingInnerInset(float innerInset) {
+    state.ringInnerInset = innerInset;
   }
 
   public float getFocusRingRadius() {
